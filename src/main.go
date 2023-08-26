@@ -3,10 +3,12 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/apex/gateway"
 	_ "github.com/lib/pq"
 )
 
@@ -120,7 +122,16 @@ func main() {
 	db = database
 
 	// Backend Code
+	port := flag.Int("port", -1, "specify a port to use http rather than AWS Lambda")
+	flag.Parse()
+	listener := gateway.ListenAndServe
+	portStr := "n/a"
+	if *port != -1 {
+		portStr = fmt.Sprintf(":%d", *port)
+		listener = http.ListenAndServe
+		http.Handle("/", http.FileServer(http.Dir("./src")))
+	}
 	http.HandleFunc("/api/login", login)
 	http.HandleFunc("/api/signup", signup)
-	log.Fatal(http.ListenAndServe(":7060", nil))
+	log.Fatal(listener(portStr, nil))
 }
