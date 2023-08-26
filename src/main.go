@@ -3,12 +3,11 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
-	"github.com/apex/gateway"
 	_ "github.com/lib/pq"
 )
 
@@ -96,7 +95,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	sqlStatement := fmt.Sprintf("INSERT INTO users VALUES ('%s', '%s', '%s')", body.Name, body.Username, body.Password)
 	_, err = db.Exec(sqlStatement)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error inserting into database: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -114,7 +113,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	connStr := "user=admin dbname=roomassignment sslmode=disable"
+	connStr := "host=postgresql-varun.alwaysdata.net port=5432 user=varun password=MaybeThisPasswordWillWork dbname=varun_roomassignment sslmode=disable"
 	database, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
@@ -122,16 +121,10 @@ func main() {
 	db = database
 
 	// Backend Code
-	port := flag.Int("port", -1, "specify a port to use http rather than AWS Lambda")
-	flag.Parse()
-	listener := gateway.ListenAndServe
-	portStr := "n/a"
-	if *port != -1 {
-		portStr = fmt.Sprintf(":%d", *port)
-		listener = http.ListenAndServe
-		http.Handle("/", http.FileServer(http.Dir("./src")))
-	}
+	Port := os.Getenv("PORT")
+	HostStr := fmt.Sprintf(":%s", Port)
+	fmt.Println(Port, HostStr)
 	http.HandleFunc("/api/login", login)
 	http.HandleFunc("/api/signup", signup)
-	log.Fatal(listener(portStr, nil))
+	log.Fatal(http.ListenAndServe(HostStr, nil))
 }
